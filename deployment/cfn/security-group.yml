@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This stack creates all required security groups
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment Name (DEV)
+    AllowedValues: ['DEV']
+  Platform:
+    Type: String
+    Default: 'PERF'
+    Description: Platform Name
+  VpcStackName:
+    Type: String
+    Description: Name of the stack which is used to create VPC and Subnets
+Resources:
+  # A public facing load balancer, this is used for accepting traffic from the public
+  # internet and directing it to public facing microservices
+  PublicLoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the public facing load balancer
+      VpcId:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+          Description: Allow IPV4 HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIpv6: '::/0'
+          Description: Allow IPV6 HTTP
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-${Platform}-ALB-SG-01'
+
+  # A security group for the containers.
+  # Two rules, allowing network traffic from a public facing load
+  # balancer and from other hosts in the security group.
+  ContainerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the ECS hosts that run containers
+      VpcId:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-${Platform}-CONTAINER-SG-02'
+  ContainerSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from the public ALB
+      GroupId: !Ref 'ContainerSecurityGroup'
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref 'PublicLoadBalancerSG'
+  ContainerSecurityGroupIngressFromSelf:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from other containers in the same security group
+      GroupId: !Ref 'ContainerSecurityGroup'
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref 'ContainerSecurityGroup'
+Outputs:
+  PublicLoadBalancerSG:
+    Description: Public Load Balancer Security Group Id
+    Value: !Ref 'PublicLoadBalancerSG'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PublicAlbSecurityGroupId' ] ]
+  ContainerSecurityGroup:
+    Description: Container Security Group Id
+    Value: !Ref 'ContainerSecurityGroup'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ContainerSecurityGroupId' ] ]

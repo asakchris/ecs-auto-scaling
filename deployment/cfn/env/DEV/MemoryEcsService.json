@@ -1,0 +1,8 @@
+{
+  "Environment": "${app_environment}",
+  "AlbStackName": "${app_environment}-${app_name}-ALB",
+  "RoleStackName": "${app_environment}-${app_name}-ROLE",
+  "EcsClusterStackName": "${app_environment}-${app_name}-ECS-CLUSTER",
+  "VpcStackName": "${app_environment}-${app_name}-VPC",
+  "SecurityGroupStackName": "${app_environment}-${app_name}-SECURITY-GROUP"
+}

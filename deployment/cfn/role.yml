@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This stack creates all required security groups
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment Name (DEV)
+    AllowedValues: ['DEV']
+  Platform:
+    Type: String
+    Default: 'PERF'
+    Description: Platform Name
+Resources:
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-${Platform}-ECS-TASK-EXEC-ROLE-01'
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ecs-tasks.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+  # IAM role to give the service's containers if the code within needs to access other AWS resources
+  # like ECS tasks, S3 buckets etc
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: HZ-ECS-TASK-ROLE
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: [ecs-tasks.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Policies:
+        - PolicyName: ECSServiceDiscovery
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  # Allow ECS container to access ECS tasks
+                  - 'ecs:ListTasks'
+                  - 'ecs:DescribeTasks'
+                Resource: '*'
+Outputs:
+  ECSTaskExecutionRole:
+    Description: ARN of ECS task execution role
+    Value: !GetAtt 'ECSTaskExecutionRole.Arn'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSTaskExecutionRoleArn' ] ]
+  ECSTaskRole:
+    Description: ARN of ECS task role
+    Value: !GetAtt 'ECSTaskRole.Arn'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSTaskRoleArn' ] ]

@@ -1,0 +1,55 @@
+{
+  "stacks": [
+    {
+      "groupName": "vpc",
+      "groupStacks": [
+        {
+          "stackName": "${app_environment}-${app_name}-VPC",
+          "templateFile": "${cfn_dir}/vpc.yml",
+          "paramFile": "${cfn_dir}/env/${app_environment}/Vpc.json",
+          "canBeDeleted": "No"
+        }
+      ]
+    },
+    {
+      "groupName": "securityGroupAndRole",
+      "groupStacks": [
+        {
+          "stackName": "${app_environment}-${app_name}-SECURITY-GROUP",
+          "templateFile": "${cfn_dir}/security-group.yml",
+          "paramFile": "${cfn_dir}/env/${app_environment}/SecurityGroup.json"
+        },
+        {
+          "stackName": "${app_environment}-${app_name}-ROLE",
+          "templateFile": "${cfn_dir}/role.yml",
+          "paramFile": "${cfn_dir}/env/${app_environment}/Role.json"
+        }
+      ]
+    },
+    {
+      "groupName": "albAndEcsCluster",
+      "groupStacks": [
+        {
+          "stackName": "${app_environment}-${app_name}-ALB",
+          "templateFile": "${cfn_dir}/alb.yml",
+          "paramFile": "${cfn_dir}/env/${app_environment}/Alb.json"
+        },
+        {
+          "stackName": "${app_environment}-${app_name}-ECS-CLUSTER",
+          "templateFile": "${cfn_dir}/ecs-cluster.yml",
+          "paramFile": "${cfn_dir}/env/${app_environment}/EcsCluster.json"
+        }
+      ]
+    },
+    {
+      "groupName": "ecsServices",
+      "groupStacks": [
+        {
+          "stackName": "${app_environment}-${app_name}-ECS-SERVICE-MEMORY",
+          "templateFile": "${cfn_dir}/memory-ecs-service.yml",
+          "paramFile": "${cfn_dir}/env/${app_environment}/MemoryEcsService.json"
+        }
+      ]
+    }
+  ]
+}

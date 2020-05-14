@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This stack creates load balancer
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment Name (DEV)
+    AllowedValues: ['DEV']
+  Platform:
+    Type: String
+    Default: 'PERF'
+    Description: Platform Name
+  VpcStackName:
+    Type: String
+    Description: Name of the stack which is used to create VPC and Subnets
+  SecurityGroupStackName:
+    Type: String
+    Description: Name of the stack used to create security group
+Resources:
+  PublicLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${Environment}-${Platform}-PUBLIC-ALB-01'
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '120'
+      Subnets:
+        - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PublicSubnetOne']]
+        - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PublicSubnetTwo']]
+      SecurityGroups:
+        - Fn::ImportValue: !Join [':', [!Ref 'SecurityGroupStackName', 'PublicAlbSecurityGroupId']]
+
+  # A default target group is used to setup the ALB to just drop traffic
+  # initially, before any real service target groups have been added.
+  DefaultTargetGroupPublic:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${Environment}-${Platform}-DEFAULT-TG-01'
+      TargetType: ip
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+
+  PublicLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - PublicLoadBalancer
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref 'DefaultTargetGroupPublic'
+          Type: 'forward'
+      LoadBalancerArn: !Ref 'PublicLoadBalancer'
+      Port: 80
+      Protocol: HTTP
+
+  MemoryTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${Environment}-${Platform}-MEMORY-TG-01'
+      TargetType: ip
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /actuator/health
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: 8081
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+  MemoryLoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref 'MemoryTargetGroup'
+          Type: 'forward'
+      Conditions:
+        - Field: path-pattern
+          Values: ['/api/v1/autoscaling/**']
+      ListenerArn: !Ref 'PublicLoadBalancerListener'
+      Priority: 1
+Outputs:
+  AlbUrl:
+    Description: The url of the public load balancer
+    Value: !Join ['', ['http://', !GetAtt 'PublicLoadBalancer.DNSName']]
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'AlbUrl' ] ]
+  MemoryTargetGroup:
+    Description: Memory Services target group ARN
+    Value: !Ref 'MemoryTargetGroup'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'MemoryTargetGroupArn' ] ]
