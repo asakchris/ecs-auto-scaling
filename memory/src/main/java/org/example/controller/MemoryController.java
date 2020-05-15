@@ -26,11 +26,21 @@ public class MemoryController {
       Byte[] bytes1 = new Byte[1048576];
       bytes.add(bytes1);
     }
+    return getMemoryInfo();
+  }
+
+  private Map<String, Long> getMemoryInfo() {
     Runtime runtime = Runtime.getRuntime();
+    final long maxMemory = runtime.maxMemory() / (1024 * 1024);
+    final long allocatedMemory = runtime.totalMemory() / (1024 * 1024);
     final long freeMemory = runtime.freeMemory() / (1024 * 1024);
-    log.info("Free Memory: {}", freeMemory);
-    Map<String, Long> result = new HashMap<>(1);
+    final long totalFreeMemory = maxMemory - allocatedMemory + freeMemory;
+    Map<String, Long> result = new HashMap<>(3);
+    result.put("maxMemoryInMB", maxMemory);
+    result.put("allocatedMemoryInMB", allocatedMemory);
     result.put("freeMemoryInMB", freeMemory);
+    result.put("totalFreeMemoryInMB", totalFreeMemory);
+    log.info("Memory Info: {}", result);
     return result;
   }
 }

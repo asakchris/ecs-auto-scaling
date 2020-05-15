@@ -45,6 +45,30 @@ Resources:
                   - 'ecs:ListTasks'
                   - 'ecs:DescribeTasks'
                 Resource: '*'
+  # Role for auto scaling ECS service
+  AutoscalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-${Platform}-ECS-AUTO-SCALING-ROLE-04'
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [application-autoscaling.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+        - PolicyName: service-autoscaling
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'application-autoscaling:*'
+                  - 'cloudwatch:DescribeAlarms'
+                  - 'cloudwatch:PutMetricAlarm'
+                  - 'ecs:DescribeServices'
+                  - 'ecs:UpdateService'
+                Resource: '*'
 Outputs:
   ECSTaskExecutionRole:
     Description: ARN of ECS task execution role
@@ -56,3 +80,8 @@ Outputs:
     Value: !GetAtt 'ECSTaskRole.Arn'
     Export:
       Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSTaskRoleArn' ] ]
+  AutoscalingRole:
+    Description: ARN of ECS service auto scaling role
+    Value: !GetAtt 'AutoscalingRole.Arn'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'AutoscalingRoleArn' ] ]
