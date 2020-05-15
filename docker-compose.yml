@@ -1,0 +1,9 @@
+version: '3'
+services:
+  ecs-memory:
+    image: asakchris/ecs-auto-scaling-memory:1.0.0-SNAPSHOT
+    environment:
+      - JAVA_OPTS=-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMPercentage=90.0 -XshowSettings:vm -Duser.timezone=UTC
+    ports:
+      - "8080:8080"
+      - "8081:8081"
